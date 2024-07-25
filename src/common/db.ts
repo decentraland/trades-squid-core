@@ -6,6 +6,6 @@ const schema = process.env.DB_SCHEMA
 export function getDb(network: Network) {
   return new TypeormDatabase({
     isolationLevel: 'READ COMMITTED',
-    stateSchema: `${network}_trades_processor_${schema}`
+    stateSchema: `${network}_processor_${schema}`
   })
 }

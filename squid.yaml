@@ -8,6 +8,6 @@ deploy:
     postgres: 
   processor:
     - name: ethereum-processor
-      cmd: [ "sqd", "process:prod:ethereum" ]
+      cmd: [ "sqd", "process:trades:prod:ethereum" ]
     - name: polygon-processor
-      cmd: [ "sqd", "process:prod:polygon" ]
+      cmd: [ "sqd", "process:trades:prod:polygon" ]

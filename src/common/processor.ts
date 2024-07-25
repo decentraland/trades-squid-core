@@ -7,11 +7,20 @@ type TradesProcessorOptions = {
   rpcEndpoint: string
   fromBlock: number
   abi: OffchainMarketplaceAbi
+  prometheusPort: number
 }
 
-export function createOffchainMarketplaceProcessor({ address, gateway, rpcEndpoint, fromBlock, abi }: TradesProcessorOptions) {
+export function createOffchainMarketplaceProcessor({
+  address,
+  gateway,
+  rpcEndpoint,
+  fromBlock,
+  abi,
+  prometheusPort
+}: TradesProcessorOptions) {
   return new EvmBatchProcessor()
     .setBlockRange({ from: fromBlock })
+    .setPrometheusPort(prometheusPort)
     .setGateway(gateway)
     .setRpcEndpoint({
       url: rpcEndpoint,

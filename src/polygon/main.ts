@@ -5,14 +5,15 @@ import { createOffchainMarketplaceProcessor } from '../common/processor'
 import { ProcessorConfig, processorConfig } from '../common/utils/config'
 import { Network } from '../model'
 
-const config: ProcessorConfig = processorConfig[Network.polygon][process.env.ETHEREUM_CHAIN_ID]
+const config: ProcessorConfig = processorConfig[Network.polygon][process.env.POLYGON_CHAIN_ID]
 
 const processor = createOffchainMarketplaceProcessor({
   address: config.marketplaceAddress,
   fromBlock: config.fromBlock,
   gateway: `https://v2.archive.subsquid.io/network/${config.gatewayNetwork}`,
   rpcEndpoint: process.env.POLYGON_RPC_ENDPOINT,
-  abi: polygonMarketplaceAbi
+  abi: polygonMarketplaceAbi,
+  prometheusPort: parseInt(process.env.POLYGON_PROMETHEUS_PORT) || 4001
 })
 
 processor.run(getDb(Network.polygon), getDataHandler(polygonMarketplaceAbi, config.marketplaceAddress, Network.polygon))

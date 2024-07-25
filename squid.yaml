@@ -1,0 +1,13 @@
+manifestVersion: subsquid.io/v0.1
+name: multichain-dcl-squid
+version: 1
+description: 'A squid that indexes DCL trades'
+build: 
+deploy:
+  addons:
+    postgres: 
+  processor:
+    - name: ethereum-processor
+      cmd: [ "sqd", "process:prod:ethereum" ]
+    - name: polygon-processor
+      cmd: [ "sqd", "process:prod:polygon" ]

@@ -1,0 +1,31 @@
+enum Network {
+  ethereum
+  polygon
+}
+
+type Trade @entity {
+  id: ID!
+  uses: Int!
+  signature: String! @index
+  network: Network!
+  status: TradeStatus!
+}
+
+enum TradeStatus {
+  cancelled
+  active
+}
+
+type SignatureIndex @entity {
+  id: ID!
+  address: String! @index
+  network: Network!
+  index: Int!
+}
+
+type ContractStatus @entity {
+  id: ID!
+  address: String! @index
+  network: Network!
+  paused: Boolean!
+}

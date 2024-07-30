@@ -1,6 +1,10 @@
 {
   "$schema": "https://cdn.subsquid.io/schemas/commands.json",
   "commands": {
+    "run:trades": {
+      "description": "run trades squid",
+      "cmd": ["sqd", "run", "."]
+    },
     "clean": {
       "description": "delete all build artifacts",
       "cmd": ["npx", "--yes", "rimraf", "lib"]

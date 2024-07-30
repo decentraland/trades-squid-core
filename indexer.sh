@@ -36,6 +36,7 @@ psql -v ON_ERROR_STOP=1 --username "$DB_USER" --dbname "$DB_NAME" --host "$DB_HO
   CREATE USER $NEW_DB_USER WITH PASSWORD '$DB_PASSWORD';
   GRANT ALL PRIVILEGES ON SCHEMA $NEW_SCHEMA_NAME TO $NEW_DB_USER;
   GRANT ALL PRIVILEGES ON SCHEMA $NEW_SCHEMA_NAME TO $SQUID_READER_USER;
+  GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA $NEW_SCHEMA_NAME TO $SQUID_READER_USER;
   GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $NEW_DB_USER;
   ALTER USER $NEW_DB_USER SET search_path TO $NEW_SCHEMA_NAME;
 EOSQL
@@ -57,6 +58,6 @@ echo "Exported CURRENT_SQUID_DB_USER: $SQUID_DB_USER"
 # Start the processor service and the GraphQL server, and write logs to a file
 LOG_FILE="sqd_run_log_${CURRENT_TIMESTAMP}.txt"
 echo "Starting squid services..."
-sqd run . > "$LOG_FILE" 2>&1 &
+sqd run:trades > "$LOG_FILE" 2>&1 &
 
 echo "Logs are being written to $LOG_FILE"

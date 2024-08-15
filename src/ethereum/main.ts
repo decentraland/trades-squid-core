@@ -5,7 +5,7 @@ import { createOffchainMarketplaceProcessor } from '../common/processor'
 import { ProcessorConfig, processorConfig } from '../common/utils/config'
 import { Network } from '../model'
 
-const config: ProcessorConfig = processorConfig[Network.ethereum][process.env.ETHEREUM_CHAIN_ID]
+const config: ProcessorConfig = processorConfig[Network.ETHEREUM][process.env.ETHEREUM_CHAIN_ID]
 
 const processor = createOffchainMarketplaceProcessor({
   address: config.marketplaceAddress,
@@ -16,4 +16,4 @@ const processor = createOffchainMarketplaceProcessor({
   prometheusPort: parseInt(process.env.ETHEREUM_PROMETHEUS_PORT) || 4000
 })
 
-processor.run(getDb(Network.ethereum), getDataHandler(ethereumMarketplaceAbi, config.marketplaceAddress, Network.ethereum))
+processor.run(getDb(Network.ETHEREUM), getDataHandler(ethereumMarketplaceAbi, config.marketplaceAddress, Network.ETHEREUM))

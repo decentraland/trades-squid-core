@@ -5,7 +5,7 @@ import { createOffchainMarketplaceProcessor } from '../common/processor'
 import { ProcessorConfig, processorConfig } from '../common/utils/config'
 import { Network } from '../model'
 
-const config: ProcessorConfig = processorConfig[Network.polygon][process.env.POLYGON_CHAIN_ID]
+const config: ProcessorConfig = processorConfig[Network.POLYGON][process.env.POLYGON_CHAIN_ID]
 
 const processor = createOffchainMarketplaceProcessor({
   address: config.marketplaceAddress,
@@ -16,4 +16,4 @@ const processor = createOffchainMarketplaceProcessor({
   prometheusPort: parseInt(process.env.POLYGON_PROMETHEUS_PORT) || 4001
 })
 
-processor.run(getDb(Network.polygon), getDataHandler(polygonMarketplaceAbi, config.marketplaceAddress, Network.polygon))
+processor.run(getDb(Network.POLYGON), getDataHandler(polygonMarketplaceAbi, config.marketplaceAddress, Network.POLYGON))

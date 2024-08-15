@@ -4,7 +4,7 @@ import { Network } from '../../model'
 export type ProcessorConfig = { marketplaceAddress: string; fromBlock: number; gatewayNetwork: string }
 
 export const processorConfig: Record<Network, Partial<Record<ChainId, ProcessorConfig>>> = {
-  [Network.ethereum]: {
+  [Network.ETHEREUM]: {
     [ChainId.ETHEREUM_MAINNET]: {
       marketplaceAddress: '', // @TODO: Add marketplace address for mainnet once contract is deployed
       fromBlock: 0, // @TODO: Add starting block for mainnet once contract is deployed
@@ -16,7 +16,7 @@ export const processorConfig: Record<Network, Partial<Record<ChainId, ProcessorC
       gatewayNetwork: 'ethereum-sepolia'
     }
   },
-  [Network.polygon]: {
+  [Network.POLYGON]: {
     [ChainId.MATIC_MAINNET]: {
       marketplaceAddress: '', // @TODO: Add marketplace address for mainnet once contract is deployed
       fromBlock: 0, // @TODO: Add starting block for mainnet once contract is deployed

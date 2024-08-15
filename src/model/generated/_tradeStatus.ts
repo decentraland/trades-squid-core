@@ -1,4 +1,4 @@
 export enum TradeStatus {
-  cancelled = "cancelled",
-  active = "active",
+    cancelled = "cancelled",
+    active = "active",
 }

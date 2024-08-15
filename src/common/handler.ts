@@ -3,9 +3,10 @@ import { Store } from '@subsquid/typeorm-store'
 import { In } from 'typeorm'
 import { ContractStatus, Network, SignatureIndex, Trade, TradeStatus } from '../model'
 import { OffchainMarketplaceAbi } from './types'
+import { sendEvents } from './utils/events'
 
 type ContractStatusAction = 'pause' | 'unpause' | undefined
-type ModifiedTrade = { uses: number; status: TradeStatus; signature: string }
+type ModifiedTrade = { uses: number; status: TradeStatus; signature: string; lastExecutedAt: bigint; cancelledAt: bigint }
 
 async function getContractStatusToUpsert(
   store: Store,
@@ -73,7 +74,7 @@ async function getTradesToUpsert(store: Store, network: Network, modifiedTrades:
     .findBy(Trade, { signature: In(modifiedTradesAddresses), network })
     .then(q => new Map(q.map(i => [i.id, i])))
 
-  return Object.values(modifiedTrades).map(({ uses, status, signature }) => {
+  return Object.values(modifiedTrades).map(({ uses, status, signature, lastExecutedAt, cancelledAt }) => {
     if (storedTrades.has(signature)) {
       const trade = storedTrades.get(signature)
       trade.uses += uses
@@ -85,7 +86,9 @@ async function getTradesToUpsert(store: Store, network: Network, modifiedTrades:
         signature,
         network,
         uses,
-        status
+        status,
+        lastExecutedAt,
+        cancelledAt
       })
     }
   })
@@ -96,8 +99,11 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
     const modifiedTrades: Record<string, ModifiedTrade> = {}
     const modifiedIndexes: Record<string, number> = {}
     let contractStatusAction: ContractStatusAction = undefined
+    let notifyTimestamp: bigint = BigInt(0)
 
     for (const block of ctx.blocks) {
+      const timestamp = BigInt(block.header.timestamp)
+      notifyTimestamp = timestamp
       for (const log of block.logs) {
         const topic = log.topics[0]
         switch (topic) {
@@ -107,7 +113,9 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
             modifiedTrades[_signature] = {
               uses: modifiedTrades[_signature]?.uses + 1 || 1,
               status: TradeStatus.active,
-              signature: _signature
+              signature: _signature,
+              lastExecutedAt: timestamp,
+              cancelledAt: modifiedTrades[_signature]?.cancelledAt || null
             }
             break
           }
@@ -132,7 +140,9 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
             modifiedTrades[_signature] = {
               uses: modifiedTrades[_signature]?.uses || 0,
               status: TradeStatus.cancelled,
-              signature: _signature
+              signature: _signature,
+              lastExecutedAt: modifiedTrades[_signature]?.lastExecutedAt || null,
+              cancelledAt: timestamp
             }
             break
           }
@@ -161,6 +171,8 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
     const contractStatusToUpsert = await getContractStatusToUpsert(ctx.store, marketplaceContractAddress, network, contractStatusAction)
     const indexesToUpsert: SignatureIndex[] = await getIndexesToUpsert(ctx.store, network, modifiedIndexes)
     const tradesToUpsert: Trade[] = await getTradesToUpsert(ctx.store, network, modifiedTrades)
+
+    await sendEvents(ctx.store, tradesToUpsert, notifyTimestamp)
 
     await ctx.store.upsert(contractStatusToUpsert)
     await ctx.store.upsert(indexesToUpsert)

@@ -1,6 +1,6 @@
 enum Network {
-  ethereum
-  polygon
+  ETHEREUM
+  POLYGON
 }
 
 type Trade @entity {
@@ -9,6 +9,8 @@ type Trade @entity {
   signature: String! @index
   network: Network!
   status: TradeStatus!
+  lastExecutedAt: BigInt
+  cancelledAt: BigInt
 }
 
 enum TradeStatus {

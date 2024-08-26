@@ -5,17 +5,16 @@ enum Network {
 
 type Trade @entity {
   id: ID!
-  uses: Int!
   signature: String! @index
   network: Network!
-  status: TradeStatus!
-  lastExecutedAt: BigInt
-  cancelledAt: BigInt
+  action: TradeAction!
+  timestamp: BigInt
+  caller: String!
 }
 
-enum TradeStatus {
+enum TradeAction {
   cancelled
-  active
+  executed
 }
 
 type SignatureIndex @entity {

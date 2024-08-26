@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import { PublishCommand, SNSClient } from '@aws-sdk/client-sns'
 import { Event } from '@dcl/schemas'
 
@@ -7,13 +8,20 @@ class EventPublisher {
   client = new SNSClient({ endpoint: this.endpoint })
 
   async publishMessage(event: Event): Promise<string | undefined> {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     const { MessageId } = await this.client.send(
       new PublishCommand({
-        // eslint-disable-next-line @typescript-eslint/naming-convention
         TopicArn: this.snsArn,
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        Message: JSON.stringify(event)
+        Message: JSON.stringify(event),
+        MessageAttributes: {
+          type: {
+            DataType: 'String',
+            StringValue: event.type
+          },
+          subType: {
+            DataType: 'String',
+            StringValue: event.subType
+          }
+        }
       })
     )
 

@@ -11,8 +11,8 @@ export const processorConfig: Record<Network, Partial<Record<ChainId, ProcessorC
       gatewayNetwork: 'ethereum-mainnet'
     },
     [ChainId.ETHEREUM_SEPOLIA]: {
-      marketplaceAddress: '0x868BD98613a5C7f6e67C23BD0A4b14E4663ACF71',
-      fromBlock: 6335092,
+      marketplaceAddress: '0x347ECe82D01A2e7371fD3c1d2F6D4e85029B863f',
+      fromBlock: 6481882,
       gatewayNetwork: 'ethereum-sepolia'
     }
   },
@@ -23,8 +23,8 @@ export const processorConfig: Record<Network, Partial<Record<ChainId, ProcessorC
       gatewayNetwork: 'polygon-mainnet'
     },
     [ChainId.MATIC_AMOY]: {
-      marketplaceAddress: '0xeeaf5d2dd4b8930039770285aa9be2cf6a9836b4',
-      fromBlock: 9643542,
+      marketplaceAddress: '0x55f4d82b0f6a105b9f1959f10a660a4395d755ab',
+      fromBlock: 10608489,
       gatewayNetwork: 'polygon-amoy-testnet'
     }
   }

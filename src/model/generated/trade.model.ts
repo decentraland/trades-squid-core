@@ -1,6 +1,6 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, IntColumn as IntColumn_, StringColumn as StringColumn_, Index as Index_, BigIntColumn as BigIntColumn_} from "@subsquid/typeorm-store"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, StringColumn as StringColumn_, Index as Index_, BigIntColumn as BigIntColumn_} from "@subsquid/typeorm-store"
 import {Network} from "./_network"
-import {TradeStatus} from "./_tradeStatus"
+import {TradeAction} from "./_tradeAction"
 
 @Entity_()
 export class Trade {
@@ -11,9 +11,6 @@ export class Trade {
     @PrimaryColumn_()
     id!: string
 
-    @IntColumn_({nullable: false})
-    uses!: number
-
     @Index_()
     @StringColumn_({nullable: false})
     signature!: string
@@ -22,11 +19,11 @@ export class Trade {
     network!: Network
 
     @Column_("varchar", {length: 9, nullable: false})
-    status!: TradeStatus
+    action!: TradeAction
 
     @BigIntColumn_({nullable: true})
-    lastExecutedAt!: bigint | undefined | null
+    timestamp!: bigint | undefined | null
 
-    @BigIntColumn_({nullable: true})
-    cancelledAt!: bigint | undefined | null
+    @StringColumn_({nullable: false})
+    caller!: string
 }

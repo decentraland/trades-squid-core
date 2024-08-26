@@ -1,6 +1,6 @@
 import { Store } from '@subsquid/typeorm-store'
 import { EntityManager } from 'typeorm'
-import { Trade as SquidTrade, TradeStatus } from '../../model'
+import { Trade as SquidTrade, TradeAction } from '../../model'
 import eventPublisher from './event_publisher'
 
 export async function getLastNotified(store: Store): Promise<bigint | null> {
@@ -21,12 +21,12 @@ export async function sendEvents(store: Store, modifiedTrades: SquidTrade[], tim
     const events = (
       await Promise.all(
         modifiedTrades
-          .filter(trade => trade.status === TradeStatus.active)
-          .filter(trade => !lastNotified || trade.lastExecutedAt > lastNotified)
+          .filter(trade => trade.action === TradeAction.executed)
+          .filter(trade => !lastNotified || trade.timestamp > lastNotified)
           .map(async trade => {
             try {
               const response = await (
-                await fetch(`${MARKETPLACE_API_URL}/v1/trades/${trade.signature}/accept?timestamp=${trade.lastExecutedAt}`)
+                await fetch(`${MARKETPLACE_API_URL}/v1/trades/${trade.signature}/accept?timestamp=${trade.timestamp}`)
               ).json()
               return response.ok ? response.data : null
             } catch (e) {

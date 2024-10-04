@@ -26,7 +26,9 @@ export async function sendEvents(store: Store, modifiedTrades: SquidTrade[], tim
           .map(async trade => {
             try {
               const response = await (
-                await fetch(`${MARKETPLACE_API_URL}/v1/trades/${trade.signature}/accept?timestamp=${trade.timestamp}`)
+                await fetch(
+                  `${MARKETPLACE_API_URL}/v1/trades/${trade.signature}/accept?timestamp=${trade.timestamp}&caller=${trade.caller}`
+                )
               ).json()
               return response.ok ? response.data : null
             } catch (e) {

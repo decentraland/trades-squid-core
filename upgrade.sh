@@ -1,8 +1,11 @@
-DB_USER=$TRADES_SQUID_DB_USER
-DB_PASSWORD=$TRADES_SQUID_DB_PASSWORD
-DB_NAME=$SQUID_DB_NAME
-DB_HOST=$SQUID_DB_HOST
-DB_PORT=$SQUID_DB_PORT
+# Load environment variables from .env file if it exists
+if [ -f .env ]; then
+  export $(grep -v '^#' .env | xargs)
+fi
+
+SQUID_TIMESTAMP=$1
+SQUID_SCHEMA="trades_squid_$SQUID_TIMESTAMP"
+SQUID_DB_USER="trades_squid_user_$SQUID_TIMESTAMP"
 
 export PGPASSWORD=$DB_PASSWORD
 
@@ -18,12 +21,12 @@ psql -v ON_ERROR_STOP=1 --username "$DB_USER" --dbname "$DB_NAME" --host "$DB_HO
     EXECUTE format('ALTER SCHEMA squid_trades RENAME TO %I', old_schema_name);
     
     -- Rename the new schema to the desired name
-    EXECUTE format('ALTER SCHEMA %I RENAME TO squid_trades', '$DB_SCHEMA');
+    EXECUTE format('ALTER SCHEMA %I RENAME TO squid_trades', '$SQUID_SCHEMA');
     
     -- Update the search path for the user
-    EXECUTE format('ALTER USER %I SET search_path TO squid_trades', '$CURRENT_SQUID_DB_USER');
+    EXECUTE format('ALTER USER %I SET search_path TO squid_trades', '$SQUID_DB_USER');
     
-    UPDATE squids SET schema = '$DB_SCHEMA' WHERE name = 'trades';
+    UPDATE squids SET schema = '$SQUID_SCHEMA' WHERE name = 'trades';
     
   -- Commit the transaction
   COMMIT;

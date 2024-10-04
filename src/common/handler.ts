@@ -77,7 +77,9 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
         switch (topic) {
           case marketplaceAbi.events.Traded.topic: {
             const { _signature, _caller } = marketplaceAbi.events.Traded.decode(log)
-            tradesToInsert.push(new Trade({ action: TradeAction.executed, signature: _signature, timestamp, caller: _caller }))
+            tradesToInsert.push(
+              new Trade({ id: _signature, network, action: TradeAction.executed, signature: _signature, timestamp, caller: _caller })
+            )
             break
           }
           case marketplaceAbi.events.ContractSignatureIndexIncreased.topic: {
@@ -98,7 +100,9 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
 
           case marketplaceAbi.events.SignatureCancelled.topic: {
             const { _signature, _caller } = marketplaceAbi.events.SignatureCancelled.decode(log)
-            tradesToInsert.push(new Trade({ action: TradeAction.cancelled, signature: _signature, timestamp, caller: _caller }))
+            tradesToInsert.push(
+              new Trade({ id: _signature, network, action: TradeAction.cancelled, signature: _signature, timestamp, caller: _caller })
+            )
             break
           }
 

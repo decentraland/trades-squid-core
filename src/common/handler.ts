@@ -1,4 +1,4 @@
-import { DataHandlerContext } from '@subsquid/evm-processor'
+import { DataHandlerContext, Log } from '@subsquid/evm-processor'
 import { Store } from '@subsquid/typeorm-store'
 import { In } from 'typeorm'
 import { ContractStatus, Network, SignatureIndex, TradeAction, Trade } from '../model'
@@ -73,10 +73,11 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
       const timestamp = BigInt(block.header.timestamp)
       notifyTimestamp = timestamp
       for (const log of block.logs) {
+        const transactionHash = (log as Log & { transactionHash: string }).transactionHash
         const topic = log.topics[0]
         switch (topic) {
           case marketplaceAbi.events.Traded.topic: {
-            const { _signature, _caller } = marketplaceAbi.events.Traded.decode(log)
+            const { _signature, _trade, _caller } = marketplaceAbi.events.Traded.decode(log)
             tradesToInsert.push(
               new Trade({
                 id: `${_signature}-${timestamp}`,
@@ -84,7 +85,10 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
                 action: TradeAction.executed,
                 signature: _signature,
                 timestamp,
-                caller: _caller
+                caller: _caller,
+                txHash: transactionHash,
+                sentBeneficiary: _trade.sent[0].beneficiary,
+                receivedBeneficiary: _trade.received[0].beneficiary
               })
             )
             break
@@ -114,7 +118,10 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
                 action: TradeAction.cancelled,
                 signature: _signature,
                 timestamp,
-                caller: _caller
+                txHash: transactionHash,
+                sentBeneficiary: null,
+                caller: _caller,
+                receivedBeneficiary: null
               })
             )
             break

@@ -10,6 +10,9 @@ type Trade @entity {
   action: TradeAction!
   timestamp: BigInt
   caller: String!
+  txHash: String!
+  sentBeneficiary: String
+  receivedBeneficiary: String
 }
 
 enum TradeAction {

@@ -26,4 +26,13 @@ export class Trade {
 
     @StringColumn_({nullable: false})
     caller!: string
+
+    @StringColumn_({nullable: false})
+    txHash!: string
+
+    @StringColumn_({nullable: true})
+    sentBeneficiary!: string | undefined | null
+
+    @StringColumn_({nullable: true})
+    receivedBeneficiary!: string | undefined | null
 }

@@ -26,6 +26,11 @@ export function createOffchainMarketplaceProcessor({
       url: rpcEndpoint,
       rateLimit: 10
     })
+    .setFields({
+      log: {
+        transactionHash: true
+      }
+    })
     .setFinalityConfirmation(75)
     .addLog({
       address: [address],

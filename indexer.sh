@@ -1,14 +1,11 @@
 #!/bin/sh
 
-# Load environment variables from .env file if it exists
-if [ -f .env ]; then
-  export $(grep -v '^#' .env | xargs)
-fi
-
 # Generate a unique schema name and user credentials using a timestamp
 CURRENT_TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 NEW_SCHEMA_NAME="trades_squid_${CURRENT_TIMESTAMP}"
 NEW_DB_USER="trades_squid_user_${CURRENT_TIMESTAMP}"
+SQUID_READER_USER="trades_squid_api_reader"
+MARKETPLACE_SERVER_API_READER_USER="dapps_marketplace_user"
 
 # Check if required environment variables are set
 if [ -z "$DB_USER" ] || [ -z "$DB_NAME" ] || [ -z "$DB_PASSWORD" ] || [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ]; then
@@ -32,8 +29,19 @@ psql -v ON_ERROR_STOP=1 --username "$DB_USER" --dbname "$DB_NAME" --host "$DB_HO
   GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $NEW_DB_USER;
   ALTER USER $NEW_DB_USER SET search_path TO $NEW_SCHEMA_NAME;
 
-  GRANT ALL PRIVILEGES ON SCHEMA $NEW_SCHEMA_NAME TO $SQUID_READER_USER;
-  GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA $NEW_SCHEMA_NAME TO $SQUID_READER_USER;
+  -- Grant schema usage to reader users
+  GRANT USAGE ON SCHEMA $NEW_SCHEMA_NAME TO $MARKETPLACE_SERVER_API_READER_USER, $SQUID_READER_USER;
+
+  -- Make squid_server_user able to grant permissions on objects in this schema
+  GRANT $NEW_DB_USER TO $DB_USER;
+
+  -- Set default privileges for tables created by NEW_DB_USER
+  ALTER DEFAULT PRIVILEGES FOR ROLE $NEW_DB_USER IN SCHEMA $NEW_SCHEMA_NAME
+    GRANT SELECT ON TABLES TO $MARKETPLACE_SERVER_API_READER_USER, $SQUID_READER_USER;
+
+  -- Insert a new record into the indexers table
+  INSERT INTO public.indexers (service, schema, db_user, created_at)
+  VALUES ('$SERVICE_NAME', '$NEW_SCHEMA_NAME', '$NEW_DB_USER', NOW());
 EOSQL
 
 # Unset PGPASSWORD

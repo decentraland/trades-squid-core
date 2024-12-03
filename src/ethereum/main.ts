@@ -13,7 +13,7 @@ const processor = createOffchainMarketplaceProcessor({
   gateway: `https://v2.archive.subsquid.io/network/${config.gatewayNetwork}`,
   rpcEndpoint: process.env.RPC_ENDPOINT_ETH,
   abi: ethereumMarketplaceAbi,
-  prometheusPort: parseInt(process.env.ETHEREUM_PROMETHEUS_PORT) || 4000
+  prometheusPort: parseInt(process.env.ETH_PROMETHEUS_PORT) || 3000
 })
 
 processor.run(getDb(Network.ETHEREUM), getDataHandler(ethereumMarketplaceAbi, config.marketplaceAddress, Network.ETHEREUM))

@@ -55,7 +55,7 @@ export DB_SCHEMA=$NEW_SCHEMA_NAME
 echo "Exported DB_SCHEMA: $DB_SCHEMA"
 
 export CURRENT_SQUID_DB_USER=$NEW_DB_USER
-echo "Exported CURRENT_SQUID_DB_USER: $SQUID_DB_USER"
+echo "Exported CURRENT_SQUID_DB_USER: $CURRENT_SQUID_DB_USER"
 
 # Start the processor service and the GraphQL server, and write logs to a file
 echo "Starting squid services..."

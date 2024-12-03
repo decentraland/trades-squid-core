@@ -13,7 +13,7 @@ const processor = createOffchainMarketplaceProcessor({
   gateway: `https://v2.archive.subsquid.io/network/${config.gatewayNetwork}`,
   rpcEndpoint: process.env.RPC_ENDPOINT_POLYGON,
   abi: polygonMarketplaceAbi,
-  prometheusPort: parseInt(process.env.POLYGON_PROMETHEUS_PORT) || 4001
+  prometheusPort: parseInt(process.env.POLYGON_PROMETHEUS_PORT) || 3001
 })
 
 processor.run(getDb(Network.POLYGON), getDataHandler(polygonMarketplaceAbi, config.marketplaceAddress, Network.POLYGON))

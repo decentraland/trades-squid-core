@@ -50,12 +50,9 @@ unset PGPASSWORD
 # Construct the DB_URL with the new user
 export DB_URL=postgresql://$NEW_DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_NAME
 export DB_SCHEMA=$NEW_SCHEMA_NAME
-
-# Log the constructed DB_URL
-echo "Exported DB_SCHEMA: $DB_SCHEMA"
-
 export CURRENT_SQUID_DB_USER=$NEW_DB_USER
 echo "Exported CURRENT_SQUID_DB_USER: $CURRENT_SQUID_DB_USER"
+echo "Exported DB_SCHEMA: $DB_SCHEMA"
 
 # Start the processor service and the GraphQL server, and write logs to a file
 echo "Starting squid services..."

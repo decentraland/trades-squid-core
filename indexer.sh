@@ -52,15 +52,12 @@ export DB_URL=postgresql://$NEW_DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_NAME
 export DB_SCHEMA=$NEW_SCHEMA_NAME
 
 # Log the constructed DB_URL
-echo "Exported DB_URL: $DB_URL"
 echo "Exported DB_SCHEMA: $DB_SCHEMA"
 
 export CURRENT_SQUID_DB_USER=$NEW_DB_USER
 echo "Exported CURRENT_SQUID_DB_USER: $SQUID_DB_USER"
 
 # Start the processor service and the GraphQL server, and write logs to a file
-LOG_FILE="sqd_run_log_${CURRENT_TIMESTAMP}.txt"
 echo "Starting squid services..."
-sqd run:trades > "$LOG_FILE" 2>&1 &
+sqd run:trades 
 
-echo "Logs are being written to $LOG_FILE"

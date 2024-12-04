@@ -3,7 +3,7 @@
   "commands": {
     "run:trades": {
       "description": "run trades squid",
-      "cmd": ["sqd", "run", ".", "-r", "1000"]
+      "cmd": ["sqd", "run", ".", "-r", "100000"]
     },
     "clean": {
       "description": "delete all build artifacts",

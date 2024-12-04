@@ -64,5 +64,5 @@ echo "Exported DB_SCHEMA: $DB_SCHEMA"
 
 # Start the processor service and the GraphQL server, and write logs to a file
 echo "Starting squid services..."
-sqd run:trades 
+sqd run:trades --node-options=$NODE_OPTIONS
 

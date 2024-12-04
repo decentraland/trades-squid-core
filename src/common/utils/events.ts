@@ -18,6 +18,7 @@ export async function sendEvents(store: Store, modifiedTrades: SquidTrade[], tim
   try {
     const lastNotified = await getLastNotified(store)
     const MARKETPLACE_API_URL = process.env.MARKETPLACE_API_URL
+    console.log('MARKETPLACE_API_URL', MARKETPLACE_API_URL)
     const events = (
       await Promise.all(
         modifiedTrades
@@ -43,6 +44,7 @@ export async function sendEvents(store: Store, modifiedTrades: SquidTrade[], tim
 
     await setLastNotified(store, timestamp)
   } catch (e) {
+    console.log('eerror sendind events:', e)
     console.log(
       'Could not send events for trades with hash',
       modifiedTrades.map(trade => trade.signature)

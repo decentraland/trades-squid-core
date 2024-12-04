@@ -21,6 +21,14 @@ echo "Generated user: $NEW_DB_USER"
 # Set PGPASSWORD to handle password prompt
 export PGPASSWORD=$DB_PASSWORD
 
+# Fetch metadata and extract service name in one command
+SERVICE_NAME=$(aws ecs describe-tasks \
+  --cluster "$(curl -s $ECS_CONTAINER_METADATA_URI_V4/task | jq -r '.Cluster')" \
+  --tasks "$(curl -s $ECS_CONTAINER_METADATA_URI_V4/task | jq -r '.TaskARN' | awk -F'/' '{print $NF}')" \
+  --query 'tasks[0].group' --output text | sed 's|service:||')
+
+echo "Service Name: $SERVICE_NAME"
+
 # Connect to the database and create the new schema and user
 psql -v ON_ERROR_STOP=1 --username "$DB_USER" --dbname "$DB_NAME" --host "$DB_HOST" --port "$DB_PORT" <<-EOSQL
   CREATE SCHEMA $NEW_SCHEMA_NAME;

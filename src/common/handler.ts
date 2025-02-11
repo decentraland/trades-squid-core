@@ -1,6 +1,7 @@
 import { DataHandlerContext, Log } from '@subsquid/evm-processor'
 import { Store } from '@subsquid/typeorm-store'
 import { In } from 'typeorm'
+import { v4 as uuidv4 } from 'uuid';
 import { ContractStatus, Network, SignatureIndex, TradeAction, Trade } from '../model'
 import { OffchainMarketplaceAbi } from './types'
 import { sendEvents } from './utils/events'
@@ -80,7 +81,7 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
             const { _signature, _trade, _caller } = marketplaceAbi.events.Traded.decode(log)
             tradesToInsert.push(
               new Trade({
-                id: `${_signature}-${timestamp}`,
+                id: uuidv4(),
                 network,
                 action: TradeAction.executed,
                 signature: _signature,

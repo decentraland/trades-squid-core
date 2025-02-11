@@ -114,7 +114,7 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
             const { _signature, _caller } = marketplaceAbi.events.SignatureCancelled.decode(log)
             tradesToInsert.push(
               new Trade({
-                id: `${_signature}-${timestamp}`,
+                id: uuidv4(),
                 network,
                 action: TradeAction.cancelled,
                 signature: _signature,

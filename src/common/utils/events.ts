@@ -18,22 +18,24 @@ export async function sendEvents(store: Store, modifiedTrades: SquidTrade[], tim
   try {
     const lastNotified = await getLastNotified(store)
     const MARKETPLACE_API_URL = process.env.MARKETPLACE_API_URL
-    console.log('MARKETPLACE_API_URL', MARKETPLACE_API_URL)
     const events = (
       await Promise.all(
         modifiedTrades
           .filter(trade => trade.action === TradeAction.executed)
           .filter(trade => !lastNotified || trade.timestamp > lastNotified)
           .map(async trade => {
+            const url = `${MARKETPLACE_API_URL}/v1/trades/${trade.signature}/accept?timestamp=${trade.timestamp}&caller=${trade.receivedBeneficiary}`
             try {
-              const response = await (
-                await fetch(
-                  `${MARKETPLACE_API_URL}/v1/trades/${trade.signature}/accept?timestamp=${trade.timestamp}&caller=${trade.receivedBeneficiary}`
-                )
-              ).json()
-              return response.ok ? response.data : null
+              const response = await fetch(url)
+              if (!response.ok) {
+                throw Error(response.statusText)
+              }
+              const data = await response.json()
+              return data
             } catch (e) {
-              console.log(e)
+              console.log(
+                `Error sending event for trade ${trade.signature}, timestamp ${trade.timestamp}, caller ${trade.receivedBeneficiary}. URL: ${url}. Error: ${e}`
+              )
             }
           })
       )
@@ -44,7 +46,6 @@ export async function sendEvents(store: Store, modifiedTrades: SquidTrade[], tim
 
     await setLastNotified(store, timestamp)
   } catch (e) {
-    console.log('eerror sendind events:', e)
     console.log(
       'Could not send events for trades with hash',
       modifiedTrades.map(trade => trade.signature)

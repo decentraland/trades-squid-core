@@ -7,6 +7,7 @@ NEW_DB_USER="trades_squid_user_${CURRENT_TIMESTAMP}"
 SQUID_READER_USER="trades_squid_api_reader"
 MARKETPLACE_SERVER_API_READER_USER="dapps_marketplace_user"
 MARKETPLACE_TRADES_MV_ROLE="mv_trades_owner"
+SQUIDS_PUBLIC_TABLE="squids"
 
 # Check if required environment variables are set
 if [ -z "$DB_USER" ] || [ -z "$DB_NAME" ] || [ -z "$DB_PASSWORD" ] || [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ]; then
@@ -47,6 +48,9 @@ psql -v ON_ERROR_STOP=1 --username "$DB_USER" --dbname "$DB_NAME" --host "$DB_HO
   -- Set default privileges for tables created by NEW_DB_USER
   ALTER DEFAULT PRIVILEGES FOR ROLE $NEW_DB_USER IN SCHEMA $NEW_SCHEMA_NAME
     GRANT SELECT, TRIGGER ON TABLES TO $MARKETPLACE_SERVER_API_READER_USER, $SQUID_READER_USER, $MARKETPLACE_TRADES_MV_ROLE;
+
+ -- Grant insert/update to squid public table
+  GRANT INSERT, UPDATE ON TABLE $SQUIDS_PUBLIC_TABLE TO $NEW_DB_USER;
 
   -- Insert a new record into the indexers table
   INSERT INTO public.indexers (service, schema, db_user, created_at)

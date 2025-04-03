@@ -6,6 +6,7 @@ NEW_SCHEMA_NAME="trades_squid_${CURRENT_TIMESTAMP}"
 NEW_DB_USER="trades_squid_user_${CURRENT_TIMESTAMP}"
 SQUID_READER_USER="trades_squid_api_reader"
 MARKETPLACE_SERVER_API_READER_USER="dapps_marketplace_user"
+MARKETPLACE_TRADES_MV_ROLE="mv_trades_owner"
 
 # Check if required environment variables are set
 if [ -z "$DB_USER" ] || [ -z "$DB_NAME" ] || [ -z "$DB_PASSWORD" ] || [ -z "$DB_HOST" ] || [ -z "$DB_PORT" ]; then
@@ -38,14 +39,15 @@ psql -v ON_ERROR_STOP=1 --username "$DB_USER" --dbname "$DB_NAME" --host "$DB_HO
   ALTER USER $NEW_DB_USER SET search_path TO $NEW_SCHEMA_NAME;
 
   -- Grant schema usage to reader users
-  GRANT USAGE ON SCHEMA $NEW_SCHEMA_NAME TO $MARKETPLACE_SERVER_API_READER_USER, $SQUID_READER_USER;
+  GRANT USAGE ON SCHEMA $NEW_SCHEMA_NAME TO $MARKETPLACE_SERVER_API_READER_USER, $SQUID_READER_USER, $MARKETPLACE_TRADES_MV_ROLE;
 
   -- Make squid_server_user able to grant permissions on objects in this schema
   GRANT $NEW_DB_USER TO $DB_USER;
 
   -- Set default privileges for tables created by NEW_DB_USER
   ALTER DEFAULT PRIVILEGES FOR ROLE $NEW_DB_USER IN SCHEMA $NEW_SCHEMA_NAME
-    GRANT SELECT ON TABLES TO $MARKETPLACE_SERVER_API_READER_USER, $SQUID_READER_USER;
+    GRANT SELECT, TRIGGER ON ALL TABLES IN SCHEMA $NEW_SCHEMA_NAME
+      TO $MARKETPLACE_SERVER_API_READER_USER, $SQUID_READER_USER, $MARKETPLACE_TRADES_MV_ROLE;
 
   -- Insert a new record into the indexers table
   INSERT INTO public.indexers (service, schema, db_user, created_at)

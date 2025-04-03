@@ -50,7 +50,7 @@ psql -v ON_ERROR_STOP=1 --username "$DB_USER" --dbname "$DB_NAME" --host "$DB_HO
     GRANT SELECT, TRIGGER ON TABLES TO $MARKETPLACE_SERVER_API_READER_USER, $SQUID_READER_USER, $MARKETPLACE_TRADES_MV_ROLE;
 
  -- Grant insert/update to squid public table
-  GRANT INSERT, UPDATE ON TABLE $SQUIDS_PUBLIC_TABLE TO $NEW_DB_USER;
+  GRANT SELECT, INSERT, UPDATE ON TABLE $SQUIDS_PUBLIC_TABLE TO $NEW_DB_USER;
 
   -- Insert a new record into the indexers table
   INSERT INTO public.indexers (service, schema, db_user, created_at)

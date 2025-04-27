@@ -45,7 +45,10 @@ export async function sendEvents(store: Store, modifiedTrades: SquidTrade[], tim
     // eslint-disable-next-line @typescript-eslint/unbound-method
     await Promise.all(events.map(eventPublisher.publishMessage))
 
-    await setLastNotified(store, timestamp)
+    if (events.length > 0) {
+      // Only set the last notified timestamp if we successfully sent at least one event
+      await setLastNotified(store, timestamp)
+    }
   } catch (e) {
     console.log('Error in sendEvents:', e)
     console.log(

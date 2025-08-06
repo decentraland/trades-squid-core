@@ -8,6 +8,7 @@ import { Network } from '../model'
 const config: ProcessorConfig = processorConfig[Network.ETHEREUM][process.env.ETHEREUM_CHAIN_ID]
 
 const processor = createOffchainMarketplaceProcessor({
+  network: Network.ETHEREUM,
   address: config.marketplaceAddress,
   fromBlock: config.fromBlock,
   gateway: `https://v2.archive.subsquid.io/network/${config.gatewayNetwork}`,

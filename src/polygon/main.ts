@@ -8,6 +8,7 @@ import { Network } from '../model'
 const config: ProcessorConfig = processorConfig[Network.POLYGON][process.env.POLYGON_CHAIN_ID]
 
 const processor = createOffchainMarketplaceProcessor({
+  network: Network.POLYGON,
   address: config.marketplaceAddress,
   fromBlock: config.fromBlock,
   gateway: `https://v2.archive.subsquid.io/network/${config.gatewayNetwork}`,

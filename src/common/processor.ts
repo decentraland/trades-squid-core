@@ -1,7 +1,9 @@
 import { EvmBatchProcessor } from '@subsquid/evm-processor'
+import { Network } from '../model'
 import { OffchainMarketplaceAbi } from './types'
 
 type TradesProcessorOptions = {
+  network: Network
   address: string
   gateway: string
   rpcEndpoint: string
@@ -10,9 +12,8 @@ type TradesProcessorOptions = {
   prometheusPort: number
 }
 
-const FINALITY_CONFIRMATION = parseInt(process.env.FINALITY_CONFIRMATION || '75')
-
 export function createOffchainMarketplaceProcessor({
+  network,
   address,
   gateway,
   rpcEndpoint,
@@ -20,6 +21,8 @@ export function createOffchainMarketplaceProcessor({
   abi,
   prometheusPort
 }: TradesProcessorOptions) {
+  const FINALITY_CONFIRMATION = parseInt(process.env[`FINALITY_CONFIRMATION_${network.toUpperCase()}`] || '75')
+
   return new EvmBatchProcessor()
     .setBlockRange({ from: fromBlock })
     .setPrometheusPort(prometheusPort)

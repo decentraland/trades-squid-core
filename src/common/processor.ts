@@ -10,6 +10,8 @@ type TradesProcessorOptions = {
   prometheusPort: number
 }
 
+const FINALITY_CONFIRMATION = parseInt(process.env.FINALITY_CONFIRMATION || '75')
+
 export function createOffchainMarketplaceProcessor({
   address,
   gateway,
@@ -31,7 +33,7 @@ export function createOffchainMarketplaceProcessor({
         transactionHash: true
       }
     })
-    .setFinalityConfirmation(75)
+    .setFinalityConfirmation(FINALITY_CONFIRMATION)
     .addLog({
       address: [address],
       topic0: [

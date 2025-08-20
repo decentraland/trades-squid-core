@@ -24,7 +24,7 @@ export async function sendEvents(store: Store, modifiedTrades: SquidTrade[], tim
           .filter(trade => trade.action === TradeAction.executed)
           .filter(trade => !lastNotified || trade.timestamp > lastNotified)
           .map(async trade => {
-            const url = `${MARKETPLACE_API_URL}/v1/trades/${trade.signature}/accept?timestamp=${trade.timestamp}&caller=${trade.receivedBeneficiary}`
+            const url = `${MARKETPLACE_API_URL}/trades/${trade.signature}/accept?timestamp=${trade.timestamp}&caller=${trade.receivedBeneficiary}`
             console.log('url', url)
             try {
               const response = await fetch(url)

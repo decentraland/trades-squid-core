@@ -152,7 +152,7 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
     const contractStatusToUpsert = await getContractStatusToUpsert(ctx.store, marketplaceContractAddress, network, contractStatusAction)
     const indexesToUpsert: SignatureIndex[] = await getIndexesToUpsert(ctx.store, network, modifiedIndexes)
 
-    await sendEvents(ctx.store, tradesToInsert, notifyTimestamp)
+    // await sendEvents(ctx.store, tradesToInsert, notifyTimestamp)
 
     await ctx.store.upsert(contractStatusToUpsert)
     await ctx.store.upsert(indexesToUpsert)

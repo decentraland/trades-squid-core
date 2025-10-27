@@ -45,6 +45,7 @@ export async function sendEvents(store: Store, modifiedTrades: SquidTrade[], tim
     await Promise.all(events.map(event => eventPublisher.publishMessage(event)))
 
     if (events.length > 0) {
+      console.log('[events] Setting last notified timestamp:', timestamp)
       // Only set the last notified timestamp if we successfully sent at least one event
       await setLastNotified(store, timestamp)
     }

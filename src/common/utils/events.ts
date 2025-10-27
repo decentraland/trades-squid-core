@@ -31,8 +31,8 @@ export async function sendEvents(store: Store, modifiedTrades: SquidTrade[], tim
               if (!response.ok) {
                 throw Error(response.statusText)
               }
-              const data = await response.json()
-              return data
+              const body = await response.json()
+              return body.data
             } catch (e) {
               console.log(
                 `Error sending event for trade ${trade.signature}, timestamp ${trade.timestamp}, caller ${trade.receivedBeneficiary}. URL: ${url}. Error: ${e}`

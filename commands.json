@@ -71,6 +71,7 @@
     },
     "process:trades:prod:polygon": {
       "description": "Start the squid processor",
+      "deps": ["migration:apply"],
       "cmd": ["node", "lib/polygon/main.js"],
       "hidden": true
     },

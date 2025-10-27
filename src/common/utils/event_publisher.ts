@@ -8,6 +8,7 @@ class EventPublisher {
   client = new SNSClient({ endpoint: this.endpoint })
 
   async publishMessage(event: Event): Promise<string | undefined> {
+    console.log('[event_publisher] Publishing message:', event)
     const { MessageId } = await this.client.send(
       new PublishCommand({
         TopicArn: this.snsArn,

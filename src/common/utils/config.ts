@@ -51,7 +51,7 @@ export const processorConfigV2: Record<Network, Partial<Record<ChainId, Processo
     },
     [ChainId.MATIC_AMOY]: {
       marketplaceAddress: '0x1b67d0e31eeb6b52d8eeed71d3616c2f5b33b8e7',
-      fromBlock: 27973528,
+      fromBlock: 27973529,
       gatewayNetwork: 'polygon-amoy-testnet'
     }
   }

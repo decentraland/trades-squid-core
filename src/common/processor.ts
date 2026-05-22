@@ -30,7 +30,7 @@ export function createOffchainMarketplaceProcessor({
   return new EvmBatchProcessor()
     .setBlockRange({ from: fromBlock })
     .setPrometheusPort(prometheusPort)
-    .setGateway(gateway)
+    .setGateway({ url: gateway, apiKey: process.env.SQUID_API_KEY })
     .setRpcEndpoint({
       url: rpcEndpoint,
       rateLimit: 10

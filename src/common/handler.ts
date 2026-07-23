@@ -1,6 +1,5 @@
 import { DataHandlerContext, Log } from '@subsquid/evm-processor'
 import { Store } from '@subsquid/typeorm-store'
-import { In } from 'typeorm'
 import { v4 as uuidv4 } from 'uuid';
 import { ContractStatus, Network, SignatureIndex, TradeAction, Trade } from '../model'
 import { OffchainMarketplaceAbi } from './types'
@@ -26,41 +25,31 @@ async function getContractStatusToUpsert(
     storedContractStatus || new ContractStatus({ id: `${address}-${network}`, address, network, paused: false })
 
   if (contractStatusAction === 'pause') {
-    storedContractStatus.paused = true
+    contractStatusToUpsert.paused = true
   } else if (contractStatusAction === 'unpause') {
-    storedContractStatus.paused = false
+    contractStatusToUpsert.paused = false
   }
 
   return [contractStatusToUpsert]
 }
 
-async function getIndexesToUpsert(store: Store, network: Network, modifiedIndexes: Record<string, number>): Promise<SignatureIndex[]> {
-  const modifiedIndexesAddresses = Object.keys(modifiedIndexes)
-
-  if (!modifiedIndexesAddresses.length) {
-    return []
-  }
-
-  const storedIndexes = await store
-    .findBy(SignatureIndex, {
-      address: In(modifiedIndexesAddresses),
-      network
-    })
-    .then(q => new Map(q.map(i => [i.id, i])))
-
-  return Object.entries(modifiedIndexes).map(([address, index]) => {
-    if (storedIndexes.has(address)) {
-      const indexEntity = storedIndexes.get(address)
-      indexEntity.index += index
-      return indexEntity
-    }
-    return new SignatureIndex({
-      id: `${address}-${network}`,
-      address,
-      network,
-      index
-    })
-  })
+function getIndexesToUpsert(network: Network, modifiedIndexes: Record<string, number>): SignatureIndex[] {
+  // `modifiedIndexes` holds the latest absolute on-chain index (the event's `_newValue`) seen for each
+  // address in this batch. Upserting the row (keyed by `${address}-${network}`) to that value is correct
+  // without reading the stored row, because the signature index is a monotonically increasing counter and
+  // `_newValue` is authoritative. The previous implementation keyed the lookup Map by `id`
+  // (`${address}-${network}`) but queried it by the bare `address`, so it never matched: every batch
+  // overwrote the row with only that batch's increment count, losing the cumulative value and making the
+  // server mark still-valid trades as cancelled once an index was bumped in more than one batch.
+  return Object.entries(modifiedIndexes).map(
+    ([address, index]) =>
+      new SignatureIndex({
+        id: `${address}-${network}`,
+        address,
+        network,
+        index
+      })
+  )
 }
 
 export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketplaceContractAddress: string, network: Network) {
@@ -95,18 +84,17 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
             break
           }
           case marketplaceAbi.events.ContractSignatureIndexIncreased.topic: {
-            if (!modifiedIndexes[marketplaceContractAddress]) {
-              modifiedIndexes[marketplaceContractAddress] = 0
-            }
-            modifiedIndexes[marketplaceContractAddress] += 1
+            // Record the authoritative post-increment value carried by the event, not a running count.
+            // The index is an absolute monotonic counter the server compares exactly against a trade's
+            // signed contractSignatureIndex, so it must reflect the true on-chain value.
+            const { _newValue } = marketplaceAbi.events.ContractSignatureIndexIncreased.decode(log)
+            modifiedIndexes[marketplaceContractAddress] = Number(_newValue)
             break
           }
           case marketplaceAbi.events.SignerSignatureIndexIncreased.topic: {
-            const { _caller } = marketplaceAbi.events.SignerSignatureIndexIncreased.decode(log)
-            if (!modifiedIndexes[_caller]) {
-              modifiedIndexes[_caller] = 0
-            }
-            modifiedIndexes[_caller] += 1
+            // Record the authoritative post-increment value carried by the event (see the contract-index case).
+            const { _caller, _newValue } = marketplaceAbi.events.SignerSignatureIndexIncreased.decode(log)
+            modifiedIndexes[_caller] = Number(_newValue)
             break
           }
 
@@ -150,7 +138,7 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
     }
 
     const contractStatusToUpsert = await getContractStatusToUpsert(ctx.store, marketplaceContractAddress, network, contractStatusAction)
-    const indexesToUpsert: SignatureIndex[] = await getIndexesToUpsert(ctx.store, network, modifiedIndexes)
+    const indexesToUpsert: SignatureIndex[] = getIndexesToUpsert(network, modifiedIndexes)
 
     await sendEvents(ctx.store, tradesToInsert, notifyTimestamp)
 

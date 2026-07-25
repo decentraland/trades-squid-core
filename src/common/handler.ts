@@ -1,7 +1,6 @@
 import { DataHandlerContext, Log } from '@subsquid/evm-processor'
 import { Store } from '@subsquid/typeorm-store'
 import { In } from 'typeorm'
-import { v4 as uuidv4 } from 'uuid';
 import { ContractStatus, Network, SignatureIndex, TradeAction, Trade } from '../model'
 import { OffchainMarketplaceAbi } from './types'
 import { sendEvents } from './utils/events'
@@ -63,6 +62,26 @@ async function getIndexesToUpsert(store: Store, network: Network, modifiedIndexe
   })
 }
 
+/**
+ * Stable, content-addressed row id: the log's own on-chain coordinates.
+ *
+ * This REPLACED `uuidv4()`, and the difference is not cosmetic:
+ *
+ *  - A generated id is not derived from the event, so re-processing the same log — a reorg rollback, or
+ *    the routine full reindex a schema change forces — yields a DIFFERENT id. Any downstream consumer
+ *    that treats a row as "one unit of work already done" is then unable to recognise it. For the
+ *    treasury consumer that credits sellers, re-crediting the entire indexed history is a direct loss.
+ *  - It also makes `store.upsert` genuinely idempotent: re-processing a log now writes the SAME primary
+ *    key instead of inserting a second row for one on-chain event.
+ *
+ * `(txHash, logIndex)` is unique and immutable for a log on a canonical chain, which is exactly the
+ * property an id needs. Note that `signature` is NOT unique per row: one transaction can execute the
+ * same multi-use trade several times, emitting several Traded logs that differ only by log index.
+ */
+function tradeRowId(txHash: string, logIndex: number): string {
+  return `${txHash}-${logIndex}`
+}
+
 export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketplaceContractAddress: string, network: Network) {
   return async function (ctx: DataHandlerContext<Store, unknown>) {
     const tradesToInsert: Trade[] = []
@@ -81,15 +100,20 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
             const { _signature, _trade, _caller } = marketplaceAbi.events.Traded.decode(log)
             tradesToInsert.push(
               new Trade({
-                id: uuidv4(),
+                id: tradeRowId(transactionHash, log.logIndex),
                 network,
                 action: TradeAction.executed,
                 signature: _signature,
                 timestamp,
                 caller: _caller,
                 txHash: transactionHash,
+                logIndex: log.logIndex,
+                // Leg [0] kept for existing consumers; the arrays carry every leg so a trade that splits
+                // its proceeds across beneficiaries is not invisible to whoever filters on one address.
                 sentBeneficiary: _trade.sent[0].beneficiary,
-                receivedBeneficiary: _trade.received[0].beneficiary
+                receivedBeneficiary: _trade.received[0].beneficiary,
+                sentBeneficiaries: _trade.sent.map(asset => asset.beneficiary),
+                receivedBeneficiaries: _trade.received.map(asset => asset.beneficiary)
               })
             )
             break
@@ -114,15 +138,18 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
             const { _signature, _caller } = marketplaceAbi.events.SignatureCancelled.decode(log)
             tradesToInsert.push(
               new Trade({
-                id: uuidv4(),
+                id: tradeRowId(transactionHash, log.logIndex),
                 network,
                 action: TradeAction.cancelled,
                 signature: _signature,
                 timestamp,
                 txHash: transactionHash,
+                logIndex: log.logIndex,
                 sentBeneficiary: null,
                 caller: _caller,
-                receivedBeneficiary: null
+                receivedBeneficiary: null,
+                sentBeneficiaries: [],
+                receivedBeneficiaries: []
               })
             )
             break

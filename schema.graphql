@@ -3,6 +3,12 @@ enum Network {
   POLYGON
 }
 
+"""
+One row per Traded / SignatureCancelled LOG (not per transaction, and not per signature).
+
+`id` is derived from the log's on-chain coordinates (`txHash-logIndex`) rather than generated, which is
+what makes a row identifiable across reindexes. See the handler for why that matters.
+"""
 type Trade @entity {
   id: ID!
   signature: String! @index
@@ -11,8 +17,23 @@ type Trade @entity {
   timestamp: BigInt
   caller: String!
   txHash: String!
+  """
+  Index of the log within its transaction. Combined with `txHash` it uniquely and STABLY identifies this
+  event, which `signature` alone does not: one transaction can execute the same multi-use trade more than
+  once (a cart buying 2 units of one listing), emitting several Traded logs that are identical in every
+  other column. Consumers that must process each fill exactly once need this to tell them apart.
+  """
+  logIndex: Int!
   sentBeneficiary: String
   receivedBeneficiary: String
+  """
+  Beneficiaries of ALL `sent` / `received` legs, in trade order. The singular `sentBeneficiary` /
+  `receivedBeneficiary` above only ever carry leg `[0]`, so a trade routing its price to one address and
+  a fee/royalty to another is invisible to anyone filtering on them — the money moves and the consumer
+  never sees it. These arrays are additive; the singular fields are kept for existing consumers.
+  """
+  sentBeneficiaries: [String!]!
+  receivedBeneficiaries: [String!]!
 }
 
 enum TradeAction {

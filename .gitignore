@@ -9,3 +9,5 @@
 /.idea
 node_modules
 sqd_run_log_*.txt
+.env.portal-local
+probe.local.js

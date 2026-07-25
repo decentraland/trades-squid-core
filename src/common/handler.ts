@@ -1,7 +1,7 @@
-import { DataHandlerContext, Log } from '@subsquid/evm-processor'
 import { Store } from '@subsquid/typeorm-store'
 import { In } from 'typeorm'
 import { ContractStatus, Network, SignatureIndex, TradeAction, Trade } from '../model'
+import { Context } from './processor'
 import { OffchainMarketplaceAbi } from './types'
 import { sendEvents } from './utils/events'
 
@@ -83,7 +83,7 @@ function tradeRowId(txHash: string, logIndex: number): string {
 }
 
 export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketplaceContractAddress: string, network: Network) {
-  return async function (ctx: DataHandlerContext<Store, unknown>) {
+  return async function (ctx: Context) {
     const tradesToInsert: Trade[] = []
     const modifiedIndexes: Record<string, number> = {}
     let contractStatusAction: ContractStatusAction = undefined
@@ -93,7 +93,7 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
       const timestamp = BigInt(block.header.timestamp)
       notifyTimestamp = timestamp
       for (const log of block.logs) {
-        const transactionHash = (log as Log & { transactionHash: string }).transactionHash
+        const transactionHash = log.transactionHash
         const topic = log.topics[0]
         switch (topic) {
           case marketplaceAbi.events.Traded.topic: {

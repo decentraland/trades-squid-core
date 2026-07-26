@@ -1,4 +1,4 @@
-import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, StringColumn as StringColumn_, Index as Index_, BigIntColumn as BigIntColumn_, IntColumn as IntColumn_} from "@subsquid/typeorm-store"
+import {Entity as Entity_, Column as Column_, PrimaryColumn as PrimaryColumn_, Index as Index_, StringColumn as StringColumn_, BigIntColumn as BigIntColumn_, IntColumn as IntColumn_} from "@subsquid/typeorm-store"
 import {Network} from "./_network"
 import {TradeAction} from "./_tradeAction"
 
@@ -7,7 +7,16 @@ import {TradeAction} from "./_tradeAction"
  * 
  * `id` is derived from the log's on-chain coordinates (`txHash-logIndex`) rather than generated, which is
  * what makes a row identifiable across reindexes. See the handler for why that matters.
+ * 
+ * The composite index matches the `(timestamp, txHash, logIndex)` keyset that consumers paginate this table
+ * by — the same tuple as their ORDER BY, so a scan resuming from a watermark is an index range read instead
+ * of a sequential scan plus a sort of the whole table on every pass.
+ * 
+ * That tuple, not `timestamp` alone: `timestamp` is block time and repeats across every trade in a block (and
+ * across blocks mined in the same second), so a single-column index still leaves the tie-break columns to be
+ * sorted. Ordering all three the same way the consumers do makes the resume position directly seekable.
  */
+@Index_(["timestamp", "txHash", "logIndex"], {unique: false})
 @Entity_()
 export class Trade {
     constructor(props?: Partial<Trade>) {

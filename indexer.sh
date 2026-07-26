@@ -8,6 +8,9 @@ SQUID_READER_USER="trades_squid_api_reader"
 MARKETPLACE_SERVER_API_READER_USER="dapps_marketplace_user"
 MARKETPLACE_TRADES_MV_ROLE="mv_trades_owner"
 ATLAS_SERVER_READONLY_USER="atlas_server_readonly_user"
+# credits-server's read-only role for the "proceeds to treasury" flow. Granted CONDITIONALLY below (see
+# there for why), because it is created per environment by ops rather than by this script.
+CREDITS_TRADES_RO_USER="credits_trades_ro"
 SQUIDS_PUBLIC_TABLE="squids"
 MARKETPLACE_SCHEMA="marketplace"
 
@@ -75,6 +78,30 @@ else
 
     ALTER DEFAULT PRIVILEGES FOR ROLE $NEW_DB_USER IN SCHEMA $NEW_SCHEMA_NAME
       GRANT SELECT ON TABLES TO $ATLAS_SERVER_READONLY_USER;
+
+    -- credits-server's read-only role for the "proceeds to treasury" flow.
+    --
+    -- It has to be granted HERE, not once by hand: every deploy indexes into a brand-new schema owned by a
+    -- brand-new user, and \`upgrade.sh\` then renames that schema over \`squid_trades\`. Privileges follow the
+    -- object, not the name, so a manual grant on today's table is gone the moment the next reindex is
+    -- promoted — the consumer would start failing every pass with a permission error, and only after a
+    -- promotion, which is the worst time to discover it.
+    --
+    -- CONDITIONAL because the role is provisioned per environment by ops and this script runs under
+    -- ON_ERROR_STOP=1: an unconditional GRANT would abort the entire squid deploy in any environment where
+    -- the role does not exist yet. Missing role => the proceeds flow is simply not provisioned there.
+    DO \$\$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '$CREDITS_TRADES_RO_USER') THEN
+        EXECUTE format('GRANT USAGE ON SCHEMA %I TO %I', '$NEW_SCHEMA_NAME', '$CREDITS_TRADES_RO_USER');
+        EXECUTE format(
+          'GRANT SELECT ON ALL TABLES IN SCHEMA %I TO %I', '$NEW_SCHEMA_NAME', '$CREDITS_TRADES_RO_USER');
+        EXECUTE format(
+          'ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA %I GRANT SELECT ON TABLES TO %I',
+          '$NEW_DB_USER', '$NEW_SCHEMA_NAME', '$CREDITS_TRADES_RO_USER');
+      END IF;
+    END
+    \$\$;
 
     -- Grant insert/update to squid public table
     GRANT SELECT, INSERT, UPDATE ON TABLE $SQUIDS_PUBLIC_TABLE TO $NEW_DB_USER;

@@ -110,8 +110,14 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
                 logIndex: log.logIndex,
                 // Leg [0] kept for existing consumers; the arrays carry every leg so a trade that splits
                 // its proceeds across beneficiaries is not invisible to whoever filters on one address.
-                sentBeneficiary: _trade.sent[0].beneficiary,
-                receivedBeneficiary: _trade.received[0].beneficiary,
+                //
+                // Both legs are OPTIONAL. A trade with nothing in `received` is a giveaway — the signer
+                // hands over an asset and takes no payment — and the contract accepts it, so the event is
+                // valid on-chain data, not a malformed log. Indexing `[0]` unguarded read `undefined` and
+                // threw inside the batch transaction, which the processor treats as fatal: it crash-looped
+                // on that block and stopped indexing every trade behind it (prod, 2026-08-07).
+                sentBeneficiary: _trade.sent[0]?.beneficiary ?? null,
+                receivedBeneficiary: _trade.received[0]?.beneficiary ?? null,
                 sentBeneficiaries: _trade.sent.map(asset => asset.beneficiary),
                 receivedBeneficiaries: _trade.received.map(asset => asset.beneficiary)
               })

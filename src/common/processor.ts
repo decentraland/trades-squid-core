@@ -86,7 +86,8 @@ export function createOffchainMarketplaceProcessor({
     .addLog({ where: { address: [address], topic0 } })
     .addLog({ where: { address: [addressV2], topic0 }, range: { from: fromBlockV2 } })
 
-  if (addressV3 && fromBlockV3) {
+  // Explicit undefined checks rather than truthiness: a fromBlock of 0 is falsy but valid.
+  if (addressV3 !== undefined && fromBlockV3 !== undefined) {
     builder.addLog({ where: { address: [addressV3], topic0: topic0V3 }, range: { from: fromBlockV3 } })
   }
 

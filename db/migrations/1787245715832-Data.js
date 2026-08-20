@@ -7,7 +7,9 @@ module.exports = class Data1787245715832 {
     }
 
     async down(db) {
-        await db.query(`ALTER TABLE "trade" DROP COLUMN "trade_digest"`)
-        await db.query(`DROP INDEX "public"."IDX_1785ec8d0a6cc461fef532550a"`)
+        // Index first: DROP COLUMN takes its dependent indexes with it, so the reverse order leaves the
+        // following DROP INDEX with nothing to drop and the revert fails. IF EXISTS keeps it idempotent.
+        await db.query(`DROP INDEX IF EXISTS "public"."IDX_1785ec8d0a6cc461fef532550a"`)
+        await db.query(`ALTER TABLE "trade" DROP COLUMN IF EXISTS "trade_digest"`)
     }
 }

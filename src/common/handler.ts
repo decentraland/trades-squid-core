@@ -2,7 +2,7 @@ import { Store } from '@subsquid/typeorm-store'
 import { In } from 'typeorm'
 import { ContractStatus, Network, SignatureIndex, TradeAction, Trade } from '../model'
 import { Context } from './processor'
-import { OffchainMarketplaceAbi } from './types'
+import { OffchainMarketplaceAbi, OffchainMarketplaceAbiV3 } from './types'
 import { sendEvents } from './utils/events'
 
 type ContractStatusAction = 'pause' | 'unpause' | undefined
@@ -82,7 +82,14 @@ function tradeRowId(txHash: string, logIndex: number): string {
   return `${txHash}-${logIndex}`
 }
 
-export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketplaceContractAddress: string, network: Network) {
+export function getDataHandler(
+  marketplaceAbi: OffchainMarketplaceAbi,
+  marketplaceAbiV3: OffchainMarketplaceAbiV3,
+  marketplaceContractAddress: string,
+  network: Network,
+  // Absent on chains where V3 is not deployed yet.
+  marketplaceAddressV3?: string
+) {
   return async function (ctx: Context) {
     const tradesToInsert: Trade[] = []
     const modifiedIndexes: Record<string, number> = {}
@@ -96,14 +103,21 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
         const transactionHash = log.transactionHash
         const topic = log.topics[0]
         switch (topic) {
-          case marketplaceAbi.events.Traded.topic: {
-            const { _signature, _trade, _caller } = marketplaceAbi.events.Traded.decode(log)
+          case marketplaceAbi.events.Traded.topic:
+          case marketplaceAbiV3.events.Traded.topic: {
+            // V3's Traded carries an extra indexed _tradeDigest, which moves topic0, so it decodes with
+            // its own module. `_signature` is unchanged across versions: still keccak256 of the raw
+            // signature bytes, so existing consumers joining executed trades on it keep working.
+            const decodedV3 = topic === marketplaceAbiV3.events.Traded.topic ? marketplaceAbiV3.events.Traded.decode(log) : null
+            const { _signature, _trade, _caller } = decodedV3 ?? marketplaceAbi.events.Traded.decode(log)
+            const tradeDigest = decodedV3?._tradeDigest ?? null
             tradesToInsert.push(
               new Trade({
                 id: tradeRowId(transactionHash, log.logIndex),
                 network,
                 action: TradeAction.executed,
                 signature: _signature,
+                tradeDigest,
                 timestamp,
                 caller: _caller,
                 txHash: transactionHash,
@@ -125,6 +139,9 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
             break
           }
           case marketplaceAbi.events.ContractSignatureIndexIncreased.topic: {
+            // Still attributed to the configured address rather than the emitting one, so V1, V2 and now
+            // V3 share a single row. Scoping it per contract needs a matching change to the server's
+            // index join, which matches these rows by network across the known marketplace addresses.
             if (!modifiedIndexes[marketplaceContractAddress]) {
               modifiedIndexes[marketplaceContractAddress] = 0
             }
@@ -141,13 +158,21 @@ export function getDataHandler(marketplaceAbi: OffchainMarketplaceAbi, marketpla
           }
 
           case marketplaceAbi.events.SignatureCancelled.topic: {
+            // Identical event shape and topic across every version, so the emitting address is the only
+            // thing that says what the bytes32 MEANS. V1/V2 cancel by keccak256 of the raw signature
+            // bytes; V3 cancels by the trade's EIP-712 digest, because keying on the signature bytes made
+            // cancellation defeatable by re-encoding the same signature (malleability). Recording the V3
+            // value as `tradeDigest` as well gives consumers a column with one consistent meaning —
+            // joining a V3 cancellation on `signature` matches a hashed-signature column nowhere.
             const { _signature, _caller } = marketplaceAbi.events.SignatureCancelled.decode(log)
+            const cancelledByDigest = !!marketplaceAddressV3 && log.address === marketplaceAddressV3
             tradesToInsert.push(
               new Trade({
                 id: tradeRowId(transactionHash, log.logIndex),
                 network,
                 action: TradeAction.cancelled,
                 signature: _signature,
+                tradeDigest: cancelledByDigest ? _signature : null,
                 timestamp,
                 txHash: transactionHash,
                 logIndex: log.logIndex,

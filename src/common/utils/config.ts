@@ -56,3 +56,25 @@ export const processorConfigV2: Record<Network, Partial<Record<ChainId, Processo
     }
   }
 }
+
+/**
+ * V3 of the off-chain marketplace. Only the testnets are listed: there is no mainnet deployment yet, and
+ * `Partial<Record<ChainId, ...>>` makes an absent chain a lookup that returns undefined rather than a
+ * wrong address. Callers must treat the whole entry as optional — see the processor entrypoints.
+ */
+export const processorConfigV3: Record<Network, Partial<Record<ChainId, ProcessorConfig>>> = {
+  [Network.ETHEREUM]: {
+    [ChainId.ETHEREUM_SEPOLIA]: {
+      marketplaceAddress: '0x257db44ac97789c16ab277eae87dcde0c246cc9f',
+      fromBlock: 11419771,
+      gatewayNetwork: 'ethereum-sepolia'
+    }
+  },
+  [Network.POLYGON]: {
+    [ChainId.MATIC_AMOY]: {
+      marketplaceAddress: '0x36fd1434a6c4b8ade80c9847c1d15033ce34488c',
+      fromBlock: 44057476,
+      gatewayNetwork: 'polygon-amoy-testnet'
+    }
+  }
+}

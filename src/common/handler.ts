@@ -1,35 +1,21 @@
-import { Store } from '@subsquid/typeorm-store'
 import { ContractStatus, Network, SignatureIndex, TradeAction, Trade } from '../model'
 import { Context } from './processor'
 import { OffchainMarketplaceAbi, OffchainMarketplaceAbiV3 } from './types'
 import { sendEvents } from './utils/events'
 
-type ContractStatusAction = 'pause' | 'unpause' | undefined
-
-async function getContractStatusToUpsert(
-  store: Store,
-  address: string,
-  network: Network,
-  contractStatusAction: ContractStatusAction
-): Promise<ContractStatus[]> {
-  if (!contractStatusAction) {
-    return []
-  }
-
-  const storedContractStatus = await store.get(ContractStatus, {
-    where: { address, network }
-  })
-
-  const contractStatusToUpsert =
-    storedContractStatus || new ContractStatus({ id: `${address}-${network}`, address, network, paused: false })
-
-  if (contractStatusAction === 'pause') {
-    storedContractStatus.paused = true
-  } else if (contractStatusAction === 'unpause') {
-    storedContractStatus.paused = false
-  }
-
-  return [contractStatusToUpsert]
+/**
+ * `pausedByAddress` holds the final paused state per emitting contract for this batch, so each row is
+ * upserted to that absolute value with no read of the stored one.
+ *
+ * Scoped per contract because the processor watches several marketplace versions and each has its own
+ * Pausable state; attributing every Paused/Unpaused to one configured address let a pause on one version
+ * describe another. Absolute rather than an action also drops two failure modes: a batch holding both a
+ * Paused and an Unpaused used to net to "no action" and persist neither, leaving the row stale, and the
+ * old code read the stored row then assigned to it, so a contract's FIRST pause dereferenced undefined
+ * and threw inside the batch, which the processor treats as fatal.
+ */
+function getContractStatusToUpsert(network: Network, pausedByAddress: Map<string, boolean>): ContractStatus[] {
+  return Array.from(pausedByAddress, ([address, paused]) => new ContractStatus({ id: `${address}-${network}`, address, network, paused }))
 }
 
 /**
@@ -85,7 +71,6 @@ function tradeRowId(txHash: string, logIndex: number): string {
 export function getDataHandler(
   marketplaceAbi: OffchainMarketplaceAbi,
   marketplaceAbiV3: OffchainMarketplaceAbiV3,
-  marketplaceContractAddress: string,
   network: Network,
   // Absent on chains where V3 is not deployed yet.
   marketplaceAddressV3?: string
@@ -93,7 +78,9 @@ export function getDataHandler(
   return async function (ctx: Context) {
     const tradesToInsert: Trade[] = []
     const modifiedIndexes: Record<string, ModifiedIndex> = {}
-    let contractStatusAction: ContractStatusAction = undefined
+    // Keyed by emitting contract; a later event in the batch overwrites an earlier one, so what is
+    // stored is the final state of each contract in this batch.
+    const pausedByAddress = new Map<string, boolean>()
     let notifyTimestamp: bigint = BigInt(0)
 
     for (const block of ctx.blocks) {
@@ -196,27 +183,19 @@ export function getDataHandler(
           }
 
           case marketplaceAbi.events.Paused.topic: {
-            if (contractStatusAction === 'unpause') {
-              contractStatusAction = undefined
-            } else {
-              contractStatusAction = 'pause'
-            }
+            pausedByAddress.set(log.address, true)
             break
           }
 
           case marketplaceAbi.events.Unpaused.topic: {
-            if (contractStatusAction === 'pause') {
-              contractStatusAction = undefined
-            } else {
-              contractStatusAction = 'unpause'
-            }
+            pausedByAddress.set(log.address, false)
             break
           }
         }
       }
     }
 
-    const contractStatusToUpsert = await getContractStatusToUpsert(ctx.store, marketplaceContractAddress, network, contractStatusAction)
+    const contractStatusToUpsert = getContractStatusToUpsert(network, pausedByAddress)
     const indexesToUpsert: SignatureIndex[] = getIndexesToUpsert(network, modifiedIndexes)
 
     await sendEvents(ctx.store, tradesToInsert, notifyTimestamp)

@@ -27,13 +27,7 @@ const { dataSource, prometheus } = createOffchainMarketplaceProcessor({
   prometheusPort: parseInt(process.env.ETH_PROMETHEUS_PORT) || 3000
 })
 
-const handler = getDataHandler(
-  ethereumMarketplaceAbi,
-  ethereumMarketplaceAbiV3,
-  config.marketplaceAddress,
-  Network.ETHEREUM,
-  configV3?.marketplaceAddress
-)
+const handler = getDataHandler(ethereumMarketplaceAbi, ethereumMarketplaceAbiV3, Network.ETHEREUM, configV3?.marketplaceAddress)
 
 run(
   dataSource,

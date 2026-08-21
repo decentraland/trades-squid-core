@@ -42,12 +42,20 @@ async function getContractStatusToUpsert(
  * therefore stayed at 1, and the server compared a still-revoked trade's signed index against it and
  * judged the trade valid. `_newValue` is authoritative, which removes the whole class of problem.
  */
-function getIndexesToUpsert(network: Network, modifiedIndexes: Record<string, number>): SignatureIndex[] {
-  return Object.entries(modifiedIndexes).map(
-    ([address, index]) =>
+type ModifiedIndex = { address: string; contract: string; index: number }
+
+/** Identity of a counter: whose it is, and which deployment holds it. */
+function indexKey(address: string, contract: string): string {
+  return `${address}-${contract}`
+}
+
+function getIndexesToUpsert(network: Network, modifiedIndexes: Record<string, ModifiedIndex>): SignatureIndex[] {
+  return Object.values(modifiedIndexes).map(
+    ({ address, contract, index }) =>
       new SignatureIndex({
-        id: `${address}-${network}`,
+        id: `${address}-${contract}-${network}`,
         address,
+        contract,
         network,
         index
       })
@@ -84,7 +92,7 @@ export function getDataHandler(
 ) {
   return async function (ctx: Context) {
     const tradesToInsert: Trade[] = []
-    const modifiedIndexes: Record<string, number> = {}
+    const modifiedIndexes: Record<string, ModifiedIndex> = {}
     let contractStatusAction: ContractStatusAction = undefined
     let notifyTimestamp: bigint = BigInt(0)
 
@@ -136,14 +144,25 @@ export function getDataHandler(
             // from the specific version it was signed against. Collapsing all versions onto one row let a
             // bump on one of them invalidate trades signed against another.
             const { _newValue } = marketplaceAbi.events.ContractSignatureIndexIncreased.decode(log)
-            modifiedIndexes[log.address] = Number(_newValue)
+            // The marketplace's own counter: subject and holder are the same contract.
+            modifiedIndexes[indexKey(log.address, log.address)] = {
+              address: log.address,
+              contract: log.address,
+              index: Number(_newValue)
+            }
             break
           }
           case marketplaceAbi.events.SignerSignatureIndexIncreased.topic: {
             // Signer counters are per signer, not per marketplace, so the caller is the right key. Also
             // recorded as the absolute value the event carries — see getIndexesToUpsert.
             const { _caller, _newValue } = marketplaceAbi.events.SignerSignatureIndexIncreased.decode(log)
-            modifiedIndexes[_caller] = Number(_newValue)
+            // The signer's counter, but held per deployment: signerSignatureIndex is storage on the
+            // emitting marketplace, so the same signer has an independent value on each version.
+            modifiedIndexes[indexKey(_caller, log.address)] = {
+              address: _caller,
+              contract: log.address,
+              index: Number(_newValue)
+            }
             break
           }
 

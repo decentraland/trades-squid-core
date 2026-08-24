@@ -3,6 +3,7 @@ import * as evmObjects from '@subsquid/evm-objects'
 import { DataSourceBuilder, FieldSelection } from '@subsquid/evm-stream'
 import { Store } from '@subsquid/typeorm-store'
 import { OffchainMarketplaceAbi, OffchainMarketplaceAbiV3 } from './types'
+import { portalSource } from './utils/portal'
 
 type TradesProcessorOptions = {
   address: string
@@ -66,7 +67,7 @@ export function createOffchainMarketplaceProcessor({
   // SQD Network Portal replaces the deprecated v2 archive gateway. Portal serves
   // real-time data and handles finality itself, so the RPC endpoint and the finality
   // confirmation setting are gone: this squid reads no contract state, so it needs no
-  // RPC client at all.
+  // RPC client at all. See portalSource for which endpoint is used and why.
   // V3 only differs from V1/V2 in `Traded`, whose topic moved because the event gained an indexed
   // _tradeDigest. Every other topic is byte-identical, so only that one must come from the V3 module —
   // reusing `topic0` here would filter V3 logs on a topic no V3 log carries and match nothing, silently.
@@ -80,7 +81,7 @@ export function createOffchainMarketplaceProcessor({
   ]
 
   const builder = new DataSourceBuilder()
-    .setPortal(`https://portal.sqd.dev/datasets/${portalDataset}`)
+    .setPortal(portalSource(portalDataset))
     .setBlockRange({ from: fromBlock })
     .setFields(fields)
     .addLog({ where: { address: [address], topic0 } })

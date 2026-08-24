@@ -27,13 +27,7 @@ const { dataSource, prometheus } = createOffchainMarketplaceProcessor({
   prometheusPort: parseInt(process.env.POLYGON_PROMETHEUS_PORT) || 3001
 })
 
-const handler = getDataHandler(
-  polygonMarketplaceAbi,
-  polygonMarketplaceAbiV3,
-  config.marketplaceAddress,
-  Network.POLYGON,
-  configV3?.marketplaceAddress
-)
+const handler = getDataHandler(polygonMarketplaceAbi, polygonMarketplaceAbiV3, Network.POLYGON, configV3?.marketplaceAddress)
 
 run(
   dataSource,

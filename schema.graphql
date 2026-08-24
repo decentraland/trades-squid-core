@@ -20,6 +20,19 @@ sorted. Ordering all three the same way the consumers do makes the resume positi
 type Trade @entity @index(fields: ["timestamp", "txHash", "logIndex"]) {
   id: ID!
   signature: String! @index
+  """
+  The trade's EIP-712 digest, when the emitting contract identifies trades by it.
+
+  Set only for V3 marketplace rows; null for V1/V2, which have no such value. V3's malleability fix keys
+  cancellations and use counts on this digest instead of `keccak256(signature bytes)`, and since
+  `SignatureCancelled` kept its exact shape, a V3 cancellation puts the digest in `signature` — where it
+  matches a hashed-signature column nowhere. This column carries the same value under one stable meaning,
+  so a consumer correlating a cancellation back to its trade has something to join on.
+
+  For executed V3 trades it comes from `Traded._tradeDigest`; `signature` still carries
+  `keccak256(signature bytes)` on every version.
+  """
+  tradeDigest: String @index
   network: Network!
   action: TradeAction!
   timestamp: BigInt
@@ -49,9 +62,22 @@ enum TradeAction {
   executed
 }
 
+"""
+One counter, scoped to the marketplace contract that holds it.
+
+Both counters the marketplace keeps live here: `contractSignatureIndex`, where `address` is the
+marketplace itself, and `signerSignatureIndex(signer)`, where `address` is the signer. Both are storage on
+a specific deployment, so V1, V2 and V3 each keep their own and they start at zero independently.
+
+`contract` is therefore part of the identity, not decoration: keyed on `address + network` alone, a signer
+bumping their index on V3 overwrote their V2 row, which let a bump on one version cancel trades signed
+against another, and let a lower counter from a later version make a genuinely revoked trade look valid.
+"""
 type SignatureIndex @entity {
   id: ID!
   address: String! @index
+  """The marketplace deployment whose storage this counter came from."""
+  contract: String! @index
   network: Network!
   index: Int!
 }

@@ -30,6 +30,22 @@ export class Trade {
     @StringColumn_({nullable: false})
     signature!: string
 
+    /**
+     * The trade's EIP-712 digest, when the emitting contract identifies trades by it.
+     * 
+     * Set only for V3 marketplace rows; null for V1/V2, which have no such value. V3's malleability fix keys
+     * cancellations and use counts on this digest instead of `keccak256(signature bytes)`, and since
+     * `SignatureCancelled` kept its exact shape, a V3 cancellation puts the digest in `signature` — where it
+     * matches a hashed-signature column nowhere. This column carries the same value under one stable meaning,
+     * so a consumer correlating a cancellation back to its trade has something to join on.
+     * 
+     * For executed V3 trades it comes from `Traded._tradeDigest`; `signature` still carries
+     * `keccak256(signature bytes)` on every version.
+     */
+    @Index_()
+    @StringColumn_({nullable: true})
+    tradeDigest!: string | undefined | null
+
     @Column_("varchar", {length: 8, nullable: false})
     network!: Network
 

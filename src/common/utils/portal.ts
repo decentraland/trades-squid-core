@@ -21,10 +21,15 @@ export function portalSource(dataset: string): {
   url: string
   http: { headers?: Record<string, string>; retryAttempts: number }
 } {
-  // SQD_PORTAL_API_KEY is the Portal key (SSM `ops-param-sqd-portal-api-key`). SQUID_API_KEY is a
-  // DIFFERENT product's key (the v2 archive) that happened to hold a Portal key during the
-  // migration; it is only read as a fallback and should not be relied on.
-  const apiKey = process.env.SQD_PORTAL_API_KEY || process.env.SQUID_API_KEY
+  // Only SQD_PORTAL_API_KEY authenticates the shared endpoint.
+  //
+  // SQUID_API_KEY is deliberately NOT read here. It carries the key for a different SQD product (the
+  // v2 archive), and only held a Portal key while both shared one variable. Reading it as a fallback
+  // is what took this squid down on its first deploy: the environment did not define the Portal key
+  // yet, so the fallback found the archive key, concluded a key was available, sent it to the shared
+  // endpoint and got `403` on every batch — a crash loop. With no key at all the public endpoint
+  // would have served the same data unauthenticated, so guessing was worse than not guessing.
+  const apiKey = process.env.SQD_PORTAL_API_KEY
   const host = process.env.SQD_PORTAL_URL || (apiKey ? SHARED_PORTAL_HOST : PUBLIC_PORTAL_HOST)
 
   if (!apiKey) {

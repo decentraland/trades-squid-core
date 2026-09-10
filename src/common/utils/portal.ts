@@ -45,6 +45,11 @@ export function portalSource(dataset: string): {
       ...(apiKey ? { headers: { 'x-api-key': apiKey } } : {}),
       // Portal answers a transient 503 when no worker is free; retrying forever keeps the
       // processor alive across those instead of exiting and relying on the container restart.
+      //
+      // Needs portal-client >= 0.7.0, which is why it is pinned as a direct dependency. Before
+      // that, `request()` resolved this as `options.retryAttempts ?? 6` against the PER-REQUEST
+      // options, so the client-level value never reached it: the option looked set and the real
+      // budget was six attempts.
       retryAttempts: Infinity
     }
   }

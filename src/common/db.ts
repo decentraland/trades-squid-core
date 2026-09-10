@@ -1,7 +1,9 @@
 import { TypeormDatabase } from '@subsquid/typeorm-store'
 import { Network } from '../model'
 
-const schema = process.env.DB_SCHEMA
+// SQUID_SCHEMA, not DB_SCHEMA: typeorm-config would turn the latter into a
+// per-connection search_path pin that promotion invalidates (see indexer.sh).
+const schema = process.env.SQUID_SCHEMA
 
 export function getDb(network: Network) {
   return new TypeormDatabase({

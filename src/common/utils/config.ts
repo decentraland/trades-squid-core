@@ -58,12 +58,22 @@ export const processorConfigV2: Record<Network, Partial<Record<ChainId, Processo
 }
 
 /**
- * V3 of the off-chain marketplace. Only the testnets are listed: there is no mainnet deployment yet, and
- * `Partial<Record<ChainId, ...>>` makes an absent chain a lookup that returns undefined rather than a
- * wrong address. Callers must treat the whole entry as optional — see the processor entrypoints.
+ * V3 of the off-chain marketplace, deployed on every chain the other two run on.
+ *
+ * `Partial<Record<ChainId, ...>>` is kept rather than tightened: it makes an absent chain a lookup that
+ * returns undefined instead of a wrong address, and the processor entrypoints already treat the whole
+ * entry as optional. That is what let the mainnet chains stay unlisted until they were deployed.
+ *
+ * `fromBlock` is each contract's own deployment block, so a processor starts at the first block that can
+ * carry one of its logs rather than replaying history that provably has none.
  */
 export const processorConfigV3: Record<Network, Partial<Record<ChainId, ProcessorConfig>>> = {
   [Network.ETHEREUM]: {
+    [ChainId.ETHEREUM_MAINNET]: {
+      marketplaceAddress: '0x0f11d0d1671519683bd48abf3dbe779e300941cd',
+      fromBlock: 25950329,
+      gatewayNetwork: 'ethereum-mainnet'
+    },
     [ChainId.ETHEREUM_SEPOLIA]: {
       marketplaceAddress: '0x257db44ac97789c16ab277eae87dcde0c246cc9f',
       fromBlock: 11419771,
@@ -71,6 +81,11 @@ export const processorConfigV3: Record<Network, Partial<Record<ChainId, Processo
     }
   },
   [Network.POLYGON]: {
+    [ChainId.MATIC_MAINNET]: {
+      marketplaceAddress: '0xe38ef22abe871513555cba89adfe45ab4f548ada',
+      fromBlock: 93588249,
+      gatewayNetwork: 'polygon-mainnet'
+    },
     [ChainId.MATIC_AMOY]: {
       marketplaceAddress: '0x36fd1434a6c4b8ade80c9847c1d15033ce34488c',
       fromBlock: 44057476,

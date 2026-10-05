@@ -94,9 +94,10 @@ One row per ContractSignatureIndexIncreased / SignerSignatureIndexIncreased LOG.
 so a consumer can tell which counter invalidated a signed trade and when — e.g. a trade cancelled by a
 contract-wide bump versus one its signer revoked.
 
-The index serves "first bump of this counter after X": for a contract bump `address` equals `contract`.
+The index serves "the bump that moved this counter past a signed value": counters only ever increase,
+so that is the lowest `newValue` above it. For a contract bump `address` equals `contract`.
 """
-type SignatureIndexIncrease @entity @index(fields: ["address", "contract", "network", "timestamp"]) {
+type SignatureIndexIncrease @entity @index(fields: ["address", "contract", "network", "newValue"]) {
   id: ID!
   kind: SignatureIndexKind!
   """The marketplace itself for a contract bump, the signer for a signer bump."""

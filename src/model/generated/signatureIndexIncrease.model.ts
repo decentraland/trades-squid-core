@@ -9,9 +9,10 @@ import {Network} from "./_network"
  * so a consumer can tell which counter invalidated a signed trade and when — e.g. a trade cancelled by a
  * contract-wide bump versus one its signer revoked.
  * 
- * The index serves "first bump of this counter after X": for a contract bump `address` equals `contract`.
+ * The index serves "the bump that moved this counter past a signed value": counters only ever increase,
+ * so that is the lowest `newValue` above it. For a contract bump `address` equals `contract`.
  */
-@Index_(["address", "contract", "network", "timestamp"], {unique: false})
+@Index_(["address", "contract", "network", "newValue"], {unique: false})
 @Entity_()
 export class SignatureIndexIncrease {
     constructor(props?: Partial<SignatureIndexIncrease>) {

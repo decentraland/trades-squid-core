@@ -82,6 +82,36 @@ type SignatureIndex @entity {
   index: Int!
 }
 
+enum SignatureIndexKind {
+  contract
+  signer
+}
+
+"""
+One row per ContractSignatureIndexIncreased / SignerSignatureIndexIncreased LOG.
+
+`SignatureIndex` keeps only the latest value of each counter. This keeps every bump with its block time,
+so a consumer can tell which counter invalidated a signed trade and when — e.g. a trade cancelled by a
+contract-wide bump versus one its signer revoked.
+
+The index serves "first bump of this counter after X": for a contract bump `address` equals `contract`.
+"""
+type SignatureIndexIncrease @entity @index(fields: ["address", "contract", "network", "timestamp"]) {
+  id: ID!
+  kind: SignatureIndexKind!
+  """The marketplace itself for a contract bump, the signer for a signer bump."""
+  address: String!
+  """The marketplace deployment whose counter was bumped."""
+  contract: String!
+  network: Network!
+  newValue: Int!
+  caller: String!
+  timestamp: BigInt!
+  blockNumber: Int!
+  txHash: String!
+  logIndex: Int!
+}
+
 type ContractStatus @entity {
   id: ID!
   address: String! @index

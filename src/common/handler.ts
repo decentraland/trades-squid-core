@@ -1,4 +1,4 @@
-import { ContractStatus, Network, SignatureIndex, TradeAction, Trade } from '../model'
+import { ContractStatus, Network, SignatureIndex, SignatureIndexIncrease, SignatureIndexKind, TradeAction, Trade } from '../model'
 import { Context } from './processor'
 import { OffchainMarketplaceAbi, OffchainMarketplaceAbiV3 } from './types'
 import { sendEvents } from './utils/events'
@@ -49,7 +49,8 @@ function getIndexesToUpsert(network: Network, modifiedIndexes: Record<string, Mo
 }
 
 /**
- * Stable, content-addressed row id: the log's own on-chain coordinates.
+ * Stable, content-addressed row id for per-log rows (`Trade`, `SignatureIndexIncrease`): the log's own
+ * on-chain coordinates.
  *
  * This REPLACED `uuidv4()`, and the difference is not cosmetic:
  *
@@ -64,7 +65,7 @@ function getIndexesToUpsert(network: Network, modifiedIndexes: Record<string, Mo
  * property an id needs. Note that `signature` is NOT unique per row: one transaction can execute the
  * same multi-use trade several times, emitting several Traded logs that differ only by log index.
  */
-function tradeRowId(txHash: string, logIndex: number): string {
+function logRowId(txHash: string, logIndex: number): string {
   return `${txHash}-${logIndex}`
 }
 
@@ -78,6 +79,8 @@ export function getDataHandler(
   return async function (ctx: Context) {
     const tradesToInsert: Trade[] = []
     const modifiedIndexes: Record<string, ModifiedIndex> = {}
+    // Every bump, not just the last per counter: the history is what `signature_index` cannot keep.
+    const indexIncreasesToInsert: SignatureIndexIncrease[] = []
     // Keyed by emitting contract; a later event in the batch overwrites an earlier one, so what is
     // stored is the final state of each contract in this batch.
     const pausedByAddress = new Map<string, boolean>()
@@ -100,7 +103,7 @@ export function getDataHandler(
             const tradeDigest = decodedV3?._tradeDigest ?? null
             tradesToInsert.push(
               new Trade({
-                id: tradeRowId(transactionHash, log.logIndex),
+                id: logRowId(transactionHash, log.logIndex),
                 network,
                 action: TradeAction.executed,
                 signature: _signature,
@@ -130,13 +133,28 @@ export function getDataHandler(
             // its own independent counter, and a trade's signed `checks.contractSignatureIndex` was read
             // from the specific version it was signed against. Collapsing all versions onto one row let a
             // bump on one of them invalidate trades signed against another.
-            const { _newValue } = marketplaceAbi.events.ContractSignatureIndexIncreased.decode(log)
+            const { _caller, _newValue } = marketplaceAbi.events.ContractSignatureIndexIncreased.decode(log)
             // The marketplace's own counter: subject and holder are the same contract.
             modifiedIndexes[indexKey(log.address, log.address)] = {
               address: log.address,
               contract: log.address,
               index: Number(_newValue)
             }
+            indexIncreasesToInsert.push(
+              new SignatureIndexIncrease({
+                id: logRowId(transactionHash, log.logIndex),
+                kind: SignatureIndexKind.contract,
+                address: log.address,
+                contract: log.address,
+                network,
+                newValue: Number(_newValue),
+                caller: _caller,
+                timestamp,
+                blockNumber: block.header.number,
+                txHash: transactionHash,
+                logIndex: log.logIndex
+              })
+            )
             break
           }
           case marketplaceAbi.events.SignerSignatureIndexIncreased.topic: {
@@ -150,6 +168,21 @@ export function getDataHandler(
               contract: log.address,
               index: Number(_newValue)
             }
+            indexIncreasesToInsert.push(
+              new SignatureIndexIncrease({
+                id: logRowId(transactionHash, log.logIndex),
+                kind: SignatureIndexKind.signer,
+                address: _caller,
+                contract: log.address,
+                network,
+                newValue: Number(_newValue),
+                caller: _caller,
+                timestamp,
+                blockNumber: block.header.number,
+                txHash: transactionHash,
+                logIndex: log.logIndex
+              })
+            )
             break
           }
 
@@ -164,7 +197,7 @@ export function getDataHandler(
             const cancelledByDigest = !!marketplaceAddressV3 && log.address === marketplaceAddressV3
             tradesToInsert.push(
               new Trade({
-                id: tradeRowId(transactionHash, log.logIndex),
+                id: logRowId(transactionHash, log.logIndex),
                 network,
                 action: TradeAction.cancelled,
                 signature: _signature,
@@ -202,6 +235,7 @@ export function getDataHandler(
 
     await ctx.store.upsert(contractStatusToUpsert)
     await ctx.store.upsert(indexesToUpsert)
+    await ctx.store.upsert(indexIncreasesToInsert)
     await ctx.store.upsert(tradesToInsert)
   }
 }
